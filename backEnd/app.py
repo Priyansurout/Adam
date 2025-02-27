@@ -21,10 +21,18 @@ def create_weighted_loss():
         weighted_bce = bce * tf.reduce_sum(y_true * weights, axis=1)
         return tf.reduce_mean(weighted_bce)
     return weighted_binary_crossentropy
-# Load the trained model with custom loss
+
+# Download model from Google Drive
+MODEL_URL = "https://drive.google.com/uc?id=1zSIkdkh2nwTl_dRFzfuaMHPNZ4PSaaJN"  # Replace with your Google Drive file ID 
+MODEL_PATH = "movie_genre_model_with_generator_DenseNet169.h5"
+
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model from Google Drive...")
+    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+
 try:
     model = tf.keras.models.load_model(
-        "movie_genre_model_with_generator_DenseNet169.h5",
+        MODEL_PATH,
         custom_objects={'weighted_binary_crossentropy': create_weighted_loss()}
     )
 except Exception as e:
