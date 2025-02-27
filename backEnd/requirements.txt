@@ -1,5 +1,6 @@
 flask
 flask-cors
-tensorflow==2.15.0  # Match your local TensorFlow version if different
+tensorflow==2.15.0
 numpy
 pillow
+gdown
