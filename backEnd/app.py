@@ -1,18 +1,15 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 import io
 import os
-import time
 import gdown
 
-app = Flask(__name__, static_folder='frontend/build')
+app = Flask(__name__)
 CORS(app)
 
-
-# Define the custom loss function from your training code
 def create_weighted_loss():
     def weighted_binary_crossentropy(y_true, y_pred):
         genre_counts = tf.reduce_sum(y_true, axis=0)
@@ -23,8 +20,7 @@ def create_weighted_loss():
         return tf.reduce_mean(weighted_bce)
     return weighted_binary_crossentropy
 
-# Download model from Google Drive
-MODEL_URL = "https://drive.google.com/uc?id=1zSIkdkh2nwTl_dRFzfuaMHPNZ4PSaaJN"  # Replace with your Google Drive file ID 
+MODEL_URL = "https://drive.google.com/uc?id=1zSIkdkh2nwTl_dRFzfuaMHPNZ4PSaaJN"
 MODEL_PATH = "movie_genre_model_with_generator_DenseNet169.h5"
 
 if not os.path.exists(MODEL_PATH):
@@ -48,78 +44,43 @@ genres = [
     'Short', 'Sport', 'Thriller', 'War', 'Western'
 ]
 
-# Store recent predictions for demo purposes
-recent_predictions = []
-MAX_RECENT = 5
-
 def preprocess_image(image):
-    """Preprocess the image for prediction"""
-    # Handle different image formats (RGB vs RGBA)
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-    
-    image = image.resize((350, 350))  # Resize to match model input size
-    image = np.array(image) / 255.0  # Normalize pixel values
-    image = np.expand_dims(image, axis=0)  # Add batch dimension
-    return image
+    try:
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = image.resize((350, 350))
+        image = np.array(image) / 255.0
+        image = np.expand_dims(image, axis=0)
+        return image
+    except Exception as e:
+        raise ValueError(f"Image preprocessing failed: {str(e)}")
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'image' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
+        return jsonify({"error": "No image file provided"}), 400
     file = request.files['image']
-    
+    if not file.filename:
+        return jsonify({"error": "No file selected"}), 400
+    if not file.content_type.startswith('image/'):
+        return jsonify({"error": "Uploaded file is not an image"}), 400
     try:
-        # Open and preprocess the image
         image = Image.open(io.BytesIO(file.read()))
         processed_image = preprocess_image(image)
-
-        # Add artificial delay for demo effect (can remove in production)
-        time.sleep(0.5)
-        
-        # Make prediction
         predictions = model.predict(processed_image)[0]
-        
-        # Get all genre probabilities for visualization
-        all_genres_probs = [(genre, float(prob)) for genre, prob in zip(genres, predictions)]
-        all_genres_probs.sort(key=lambda x: x[1], reverse=True)
-        
-        # Get top 3 predictions
         top_3_indices = np.argsort(predictions)[-3:][::-1]
         top_3_genres = [genres[i] for i in top_3_indices]
         top_3_probs = [float(predictions[i]) for i in top_3_indices]
-
-        result = {
+        return jsonify({
             "top_3_genres": top_3_genres,
             "probabilities": top_3_probs,
-            "all_predictions": dict(all_genres_probs)
-        }
-        
-        # Store this prediction (for recent predictions feature)
-        global recent_predictions
-        recent_predictions.insert(0, result)
-        recent_predictions = recent_predictions[:MAX_RECENT]
-        
-        return jsonify(result)
-    
+            "message": "Prediction successful"
+        })
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
     except Exception as e:
-        print(f"Error processing prediction: {str(e)}")
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
-
-@app.route('/recent', methods=['GET'])
-def get_recent():
-    """Return recent predictions for demo purposes"""
-    return jsonify({"recent": recent_predictions})
-
-# Serve React app in production
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
-    if path != "" and os.path.exists(app.static_folder + '/' + path):
-        return send_from_directory(app.static_folder, path)
-    else:
-        return send_from_directory(app.static_folder, 'index.html')
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 7860))  # Use 7860 for Spaces
+    app.run(debug=False, host='0.0.0.0', port=port)
