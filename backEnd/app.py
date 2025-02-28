@@ -55,6 +55,10 @@ def preprocess_image(image):
     except Exception as e:
         raise ValueError(f"Image preprocessing failed: {str(e)}")
 
+@app.route('/')
+def home():
+    return jsonify({"message": "Movie Genre Predictor API is running"})
+
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'image' not in request.files:
