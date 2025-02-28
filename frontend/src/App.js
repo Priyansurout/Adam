@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
 
@@ -64,7 +64,7 @@ function App() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.post('http://localhost:5000/predict', formData, {
+      const response = await axios.post('https://priyansu19-movie-genre-predictor.hf.space/predict', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -72,7 +72,7 @@ function App() {
       
       setPrediction(response.data);
       
-      // Store all genre predictions for visualization
+      // Store all genre predictions for visualization (if your backend supports it)
       if (response.data.all_predictions) {
         setAllGenrePredictions(response.data.all_predictions);
       }
@@ -161,7 +161,6 @@ function App() {
           <div className="results-container">
             {prediction.top_3_genres.map((genre, index) => (
               <div key={index} className="result-card">
-                {/* <div className="genre-medal">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</div> */}
                 <h3 className="genre-name">{genre}</h3>
                 <div className="probability-bar-container">
                   <div 
