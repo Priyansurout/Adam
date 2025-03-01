@@ -9,7 +9,7 @@ A deep learning application that predicts movie genres based on movie poster ima
 
 ## 🎥 Demo Video
 
-[![Movie Genre Predictor Demo](assets/sc-1.png)](assets/sc.mp4)
+[![Movie Genre Predictor Demo](assets/sc-1.png)](https://drive.google.com/file/d/1g2UOR78G4mSDkcyKjxgLzKUPNlSUe16l/view?usp=sharing)
 <!-- Or if embedding directly on GitHub: -->
 <!-- <video src="path-to-video" controls width="640"></video> -->
 
