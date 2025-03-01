@@ -20,21 +20,22 @@ def create_weighted_loss():
         return tf.reduce_mean(weighted_bce)
     return weighted_binary_crossentropy
 
-MODEL_URL = "https://drive.google.com/uc?id=1zSIkdkh2nwTl_dRFzfuaMHPNZ4PSaaJN"
-MODEL_PATH = "movie_genre_model_with_generator_DenseNet169.h5"
+# MODEL_URL = "https://drive.google.com/uc?id=1zSIkdkh2nwTl_dRFzfuaMHPNZ4PSaaJN"
+# MODEL_PATH = "movie_genre_model_with_generator_DenseNet169.h5"
 
-if not os.path.exists(MODEL_PATH):
-    print("Downloading model from Google Drive...")
-    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+# if not os.path.exists(MODEL_PATH):
+#     print("Downloading model from Google Drive...")
+#     gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
-try:
-    model = tf.keras.models.load_model(
-        MODEL_PATH,
-        custom_objects={'weighted_binary_crossentropy': create_weighted_loss()}
-    )
-except Exception as e:
-    print(f"Error loading model: {e}")
-    raise
+# try:
+#     model = tf.keras.models.load_model(
+#         MODEL_PATH,
+#         custom_objects={'weighted_binary_crossentropy': create_weighted_loss()}
+#     )
+# except Exception as e:
+#     print(f"Error loading model: {e}")
+#     raise
+model = tf.keras.models.load_model("movie_genre_model_with_generator_DenseNet169.h5")
 
 genres = [
     'Action', 'Adventure', 'Animation', 'Biography', 'Comedy',
@@ -71,20 +72,28 @@ def predict():
     try:
         image = Image.open(io.BytesIO(file.read()))
         processed_image = preprocess_image(image)
+        
+        # First make predictions
         predictions = model.predict(processed_image)[0]
+        
+        # Then use the predictions for all_genres_probs
+        all_genres_probs = [(genre, float(prob)) for genre, prob in zip(genres, predictions)]
+        all_genres_probs.sort(key=lambda x: x[1], reverse=True)
+        
         top_3_indices = np.argsort(predictions)[-3:][::-1]
         top_3_genres = [genres[i] for i in top_3_indices]
         top_3_probs = [float(predictions[i]) for i in top_3_indices]
         return jsonify({
             "top_3_genres": top_3_genres,
             "probabilities": top_3_probs,
+            "all_predictions": dict(all_genres_probs),
             "message": "Prediction successful"
         })
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 400
     except Exception as e:
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
-
+    
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7860))  # Use 7860 for Spaces
     app.run(debug=False, host='0.0.0.0', port=port)
